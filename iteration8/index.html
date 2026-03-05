@@ -11,13 +11,35 @@
   .btn{background:rgba(0,0,0,.35);border:1px solid rgba(120,255,255,.35);color:#d6f7ff;padding:8px 10px;border-radius:10px;cursor:pointer;box-shadow:0 0 20px rgba(120,255,255,.08);}
   .btn:hover{box-shadow:0 0 30px rgba(120,255,255,.16);}
   input[type="file"]{display:none;}
-  #hud{position:fixed;left:12px;bottom:12px;z-index:10;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#d6f7ff;pointer-events:none;text-shadow:0 0 12px rgba(0,255,255,.18);max-width:min(900px,92vw);}
+  /* HUD sits above the validator strip (pinned to the bottom) to prevent overlap. */
+  #hud{position:fixed;left:12px;bottom:44px;z-index:10;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;color:#d6f7ff;pointer-events:none;text-shadow:0 0 12px rgba(0,255,255,.18);max-width:min(900px,92vw);}
   .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid rgba(120,255,255,.35);background:rgba(0,0,0,.25);margin-right:6px;}
   #overlay{position:fixed;right:12px;top:12px;z-index:11;width:min(560px,52vw);max-height:72vh;overflow:auto;background:rgba(0,0,0,.45);border:1px solid rgba(255,60,210,.25);border-radius:14px;padding:10px 12px;display:none;pointer-events:auto;box-shadow:0 0 30px rgba(255,60,210,.10);}
   #overlay .title{font-weight:700;color:#ff7be5;margin-bottom:6px;}
   #overlay .row{opacity:.95;margin:2px 0;}
   #overlay code{color:#bff;}
   #overlay .log{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,60,210,.18);font-size:11px;opacity:.95;white-space:pre-wrap;}
+
+  /* INPUT VALIDATOR (Rift-style, trimmed) */
+  /* Validator strip pinned to the bottom; keep layout safe (no overlap with HUD). */
+  #vstrip{position:fixed;left:10px;right:10px;bottom:10px;top:auto;z-index:50;
+    font:12px ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    color:#dff;background:rgba(0,0,0,0.55);border:1px solid rgba(160,255,255,0.18);
+    padding:6px 10px;border-radius:10px;display:flex;align-items:center;gap:10px;backdrop-filter: blur(6px);}
+  #vstrip .dot{width:8px;height:8px;border-radius:50%;background:rgba(80,255,180,0.9);box-shadow:0 0 10px rgba(80,255,180,0.35);}
+  #vstrip.bad .dot{background:rgba(255,90,90,0.95);box-shadow:0 0 12px rgba(255,90,90,0.45);}
+  #vstrip .pill{padding:2px 8px;border-radius:999px;border:1px solid rgba(160,255,255,0.18);background:rgba(0,0,0,0.25);}
+  #vstrip .muted{opacity:0.75}
+  #vpanel{position:fixed;left:10px;top:54px;width:min(520px,calc(100vw - 20px));max-height:52vh;overflow:auto;
+    z-index:51;display:none;color:#dff;background:rgba(0,0,0,0.72);border:1px solid rgba(160,255,255,0.18);
+    padding:10px;border-radius:12px;backdrop-filter: blur(8px);}
+  #vpanel.show{display:block;}
+  #vpanel h3{margin:0 0 8px 0;font-size:13px;letter-spacing:0.04em;}
+  #vpanel .row{display:flex;gap:8px;align-items:flex-start;margin:6px 0;}
+  #vpanel .k{min-width:150px;opacity:0.85}
+  #vpanel .v{flex:1;white-space:pre-wrap;word-break:break-word;}
+  #vpanel .log{margin-top:8px;border-top:1px solid rgba(160,255,255,0.14);padding-top:8px;opacity:0.9}
+  #vpanel .entry{margin:4px 0;opacity:0.9}
 </style>
 </head>
 <body>
@@ -26,7 +48,13 @@
 <div id="topbar">
   <button class="btn" id="btnReset">Reset</button>
   <button class="btn" id="btnLoad">Upload Blueprint JSON</button>
-  <input id="file" type="file" accept=".json,application/json"/>
+  
+  <span class="seedWrap">
+    <label class="seedLbl" for="seedInput">Seed</label>
+    <input id="seedInput" class="seedInput" type="text" spellcheck="false" autocomplete="off" value="7F021AE4" maxlength="16" />
+    <button class="btn mini" id="btnSeedNew" title="Generate new seed">↻</button>
+  </span>
+<input id="file" type="file" accept=".json,application/json"/>
 
   <button class="btn" id="btnLoadShip">Upload Ship Module</button>
   <input id="fileShip" type="file" accept=".json,application/json"/>
@@ -37,6 +65,31 @@
 
   <button class="btn" id="btnReticle">Center Reticle (C)</button>
   <button class="btn" id="btnOverlay">Toggle Debug (`)</button>
+</div>
+
+
+<div id="vstrip" class="">
+  <span class="dot"></span>
+  <span class="pill">VALIDATOR</span>
+  <span id="vsum" class="muted">online</span>
+  <span class="pill muted">H: panel</span>
+  <span class="pill muted">I: strict</span>
+</div>
+<div id="vpanel">
+  <h3>INPUT VALIDATOR</h3>
+  <div class="row"><div class="k">strict</div><div class="v" id="vStrict">false</div></div>
+  <div class="row"><div class="k">autowrap</div><div class="v" id="vAutowrap">0</div></div>
+  <div class="row"><div class="k">violations</div><div class="v" id="vViol">0</div></div>
+  <div class="row"><div class="k">reticle</div><div class="v" id="vRet">off</div></div>
+  <div class="row"><div class="k">last pointer</div><div class="v" id="vPtr">—</div></div>
+  <div class="row"><div class="k">seed</div><div class="v" id="vSeed">—</div></div>
+<div class="row"><div class="k">blueprint</div><div class="v" id="vBp">—</div></div>
+  <div class="row"><div class="k">shell</div><div class="v" id="vShell">—</div></div>
+  <div class="row"><div class="k">modules</div><div class="v" id="vMods">—</div></div>
+  <div class="row"><div class="k">reticle tile</div><div class="v" id="vTile">—</div></div>
+  <div class="row"><div class="k">log</div><div class="v"><button class="btn" id="vDl" style="padding:6px 10px;border-radius:10px;">Download</button></div></div>
+
+  <div class="log" id="vLog"></div>
 </div>
 
 <div id="overlay">
@@ -54,6 +107,266 @@
 <script>
 (() => {
   'use strict';
+  // ============================================================
+  // INPUT VALIDATOR (Rift Ascent style: AUTOWRAP + receipts)
+  // - Wraps event listeners to prevent silent crashes
+  // - Tracks bind-sites for unwrapped listeners (best-effort)
+  // - Provides strict mode for "unwrapped listener" violations
+  // - Tracks center-reticle placement contract
+  // ============================================================
+
+  const vstrip = document.getElementById('vstrip');
+  const vpanel = document.getElementById('vpanel');
+  const vsum   = document.getElementById('vsum');
+  const vStrict= document.getElementById('vStrict');
+  const vAutowrap = document.getElementById('vAutowrap');
+  const vViol  = document.getElementById('vViol');
+  const vRet   = document.getElementById('vRet');
+  const vPtr   = document.getElementById('vPtr');
+  const vLog   = document.getElementById('vLog');
+
+  const _now = ()=> (performance && performance.now) ? performance.now() : Date.now();
+
+  const IV = {
+    strict:false,
+    autoWrapped:0,
+    violations:[],
+    autowraps:[],
+    _wrapMap:new WeakMap(),
+    _origAdd:null,
+    _origRm:null,
+    lastPointer:null,
+    reticle:{on:false, x:0, y:0, W:0, H:0},
+    log:(kind,msg)=>{
+      try{
+        const t = (_now()/1000).toFixed(3);
+        const div = document.createElement('div');
+        div.className='entry';
+        div.textContent = `[${t}] ${kind}: ${msg}`;
+        vLog.prepend(div);
+        while(vLog.childNodes.length>32) vLog.removeChild(vLog.lastChild);
+      }catch(e){}
+    },
+    describeTarget:(t)=>{
+      try{
+        if(t===window) return 'window';
+        if(t===document) return 'document';
+        if(t && t.tagName) return t.tagName.toLowerCase() + (t.id?('#'+t.id):'');
+      }catch(e){}
+      return 'target';
+    },
+    wrap:(label, fn)=>{
+      if(typeof fn!=='function') return fn;
+      const existing = IV._wrapMap.get(fn);
+      if(existing) return existing;
+      const wrapped = function(ev){
+        try{ return fn.call(this, ev); }
+        catch(err){
+          const m = (err && err.message) ? err.message : String(err||'error');
+          IV.violations.push({at:_now(), type:'handler_throw', label, msg:m});
+          IV.log('VIOLATION', `${label} threw: ${m}`);
+        }
+      };
+      IV._wrapMap.set(fn, wrapped);
+      return wrapped;
+    },
+    _autoWrap:(target,type,listener)=>{
+      const existing = IV._wrapMap.get(listener);
+      if(existing) return existing;
+
+      const tname = IV.describeTarget(target);
+      const label = `${tname}.${type}`;
+
+      // capture bind-site
+      let stack="";
+      try{ throw new Error("AUTOWRAP_BIND_SITE"); }catch(err){ stack = (err && err.stack) ? String(err.stack) : ""; }
+      const lines = String(stack||"").split("\n").map(s=>String(s||"").trim()).filter(Boolean);
+      const skipRe = /(AUTOWRAP_BIND_SITE|IV\._autoWrap|EventTarget\.prototype\.addEventListener|IV\.wrap|INPUT VALIDATOR)/;
+      let where="";
+      for(const ln of lines){
+        const clean = ln.replace(/^at\s+/,"");
+        if(skipRe.test(clean)) continue;
+        if(/\.(js|html):\d+(:\d+)?/.test(clean) || /file:\/\//.test(clean)) { where = clean; break; }
+      }
+      if(!where){
+        for(const ln of lines){
+          const clean = ln.replace(/^at\s+/,"");
+          if(skipRe.test(clean)) continue;
+          where = clean; break;
+        }
+      }
+
+      const origin = (/\bIV\b|INPUT VALIDATOR|validator/i).test(where);
+
+            IV.autoWrapped++;
+      IV.autowraps.push({at:_now(), target:tname, type, label, where});
+      if(IV.autowraps.length>160) IV.autowraps.shift();
+
+      if(IV.strict && !origin){
+        IV.violations.push({at:_now(), type:'unwrapped_listener', label:`${label}${where?(' @ '+where):''}`});
+        IV.log('VIOLATION', `AUTOWRAP(strict): ${label}${where?(' @ '+where):''}`);
+      }else{
+        if(IV.strict && origin){ IV.log('AUTOWRAP', `AUTOWRAP(validator): ${label}${where?(' @ '+where):''}`); }
+        else IV.log('AUTOWRAP', `${label}${where?(' @ '+where):''}`);
+      }
+      return IV.wrap(label, listener);
+    },
+    installAutowrap:()=>{
+      if(IV._origAdd) return;
+      IV._origAdd = EventTarget.prototype.addEventListener;
+      IV._origRm  = EventTarget.prototype.removeEventListener;
+
+      EventTarget.prototype.addEventListener = function(type, listener, options){
+        // don't wrap non-functions
+        if(typeof listener !== 'function') return IV._origAdd.call(this, type, listener, options);
+        // already wrapped? ok
+        if(IV._wrapMap.get(listener)) return IV._origAdd.call(this, type, listener, options);
+        // auto-wrap
+        const w = IV._autoWrap(this, String(type), listener);
+        return IV._origAdd.call(this, type, w, options);
+      };
+
+      EventTarget.prototype.removeEventListener = function(type, listener, options){
+        const w = IV._wrapMap.get(listener) || listener;
+        return IV._origRm.call(this, type, w, options);
+      };
+
+      // global crash capture
+      try{
+        window.addEventListener('error', (ev)=>{ IV.log('ERROR', String(ev.message||ev.error||'window.error')); }, true);
+        window.addEventListener('unhandledrejection', (ev)=>{ IV.log('REJECT', String(ev.reason||'unhandledrejection')); }, true);
+      }catch(e){}
+    },
+    setStrict:(v)=>{
+      IV.strict = !!v;
+      vStrict.textContent = String(IV.strict);
+      IV.log('MODE', `strict=${IV.strict}`);
+    },
+    togglePanel:()=>{
+      vpanel.classList.toggle('show');
+    },
+    updateUI:()=>{
+      const violCount = IV.violations.length;
+      vViol.textContent = String(violCount);
+      vAutowrap.textContent = String(IV.autoWrapped);
+      const seedTag = (STATE && STATE.seedStr) ? ` • seed=${STATE.seedStr}` : '';
+      vsum.textContent = violCount ? `${violCount} violation(s)${seedTag}` : `OK • autowrap=${IV.autoWrapped}${seedTag}`;
+      vstrip.classList.toggle('bad', !!violCount);
+
+      // reticle contract display
+      if(IV.reticle.on){
+        vRet.textContent = `on @ ${IV.reticle.x.toFixed(1)},${IV.reticle.y.toFixed(1)} (W=${IV.reticle.W} H=${IV.reticle.H})`;
+      }else{
+        vRet.textContent = 'off';
+      }
+      vPtr.textContent = IV.lastPointer ? `${IV.lastPointer.type} ${IV.lastPointer.x.toFixed(1)},${IV.lastPointer.y.toFixed(1)}` : '—';
+      // blueprint/shell/module contracts
+      try{
+        if(typeof vSeed !== 'undefined') vSeed.textContent = (STATE && STATE.seedStr) ? `${STATE.seedStr} (${STATE.seedOk?'OK':'BAD'})` : '—';
+        vBp.textContent = blueprintLoaded ? 'loaded' : '—';
+        vShell.textContent = activeShellId ? activeShellId : '—';
+        const mShip = Modules.ship ? 'ship' : null;
+        const mScn  = Modules.scanner ? 'scanner' : null;
+        const mHud  = Modules.hud ? 'hud' : null;
+        const arr = [mShip,mScn,mHud].filter(Boolean);
+        vMods.textContent = arr.length ? (arr.join(', ')) : '—';
+      }catch(e){}
+
+      // reticle -> tile resolver
+      try{
+        if(IV.reticle.on && blueprintLoaded){
+          const rt = resolveReticleTile();
+          if(rt && rt.idx>=0 && rt.tile){
+            vTile.textContent = `idx=${rt.idx}  f${rt.tile.face} i${rt.tile.i} j${rt.tile.j}  dot=${rt.dot.toFixed(4)}`;
+          }else if(rt){
+            vTile.textContent = `—  dot=${(rt.dot??0).toFixed(4)}`;
+          }else{
+            vTile.textContent = '—';
+          }
+        }else{
+          vTile.textContent = '—';
+        }
+      }catch(e){ vTile.textContent='—'; }
+
+    },
+    validateReticle:()=>{
+      if(!IV.reticle.on) return;
+      const {x,y,W,H} = IV.reticle;
+      const eps = 0.5; // pixels
+      // DARPA contract: reticle must be at true canvas center when enabled
+      const cx = W*0.5, cy = H*0.5;
+      const dx = Math.abs(x - cx), dy = Math.abs(y - cy);
+      if(dx>eps || dy>eps){
+        IV.violations.push({at:_now(), type:'reticle_contract', label:`reticle drift dx=${dx.toFixed(2)} dy=${dy.toFixed(2)}`});
+        IV.log('VIOLATION', `reticle_contract dx=${dx.toFixed(2)} dy=${dy.toFixed(2)} expected ${cx.toFixed(1)},${cy.toFixed(1)} got ${x.toFixed(1)},${y.toFixed(1)}`);
+        // auto-correct by forcing center next frame (engine should comply)
+      }
+    }
+  };
+
+  IV.installAutowrap();
+
+  // panel/strict hotkeys (H/I)
+  addEventListener('keydown', (e)=>{
+    const k = (e.key||'').toLowerCase();
+    if(k==='h'){ IV.togglePanel(); }
+    if(k==='i'){ IV.setStrict(!IV.strict); }
+
+  // ---------- validator log download ----------
+  function _orderedEngineLogs(){
+    const arr=[];
+    for(let k=0;k<LOG_N;k++){
+      const idx = (logHead + k) % LOG_N;
+      const s = logs[idx];
+      if(s) arr.push(s);
+    }
+    return arr;
+  }
+  function validatorDump(){
+    const sh = shells.get(activeShellId);
+    const dump = {
+      at: new Date().toISOString(),
+      strict: IV.strict,
+      autowrapCount: IV.autoWrapped,
+      autowraps: IV.autowraps.slice(-200),
+      violations: IV.violations.slice(-400),
+      lastPointer: IV.lastPointer,
+      reticle: IV.reticle,
+      state: {
+        bootState, buildState,
+        blueprintLoaded,
+        activeShellId,
+        shell: sh ? {shellId: sh.shellId, seed: sh.seed, routeTiles: sh.routeTiles.length, mappedCount: sh.mappedCount, constructed: sh.constructed} : null,
+        modules: {ship: !!Modules.ship, scanner: !!Modules.scanner, hud: !!Modules.hud},
+      },
+      receipts: receipts.slice(-400),
+      engineLogs: _orderedEngineLogs(),
+    };
+    return dump;
+  }
+  function downloadText(filename, text){
+    const blob = new Blob([text], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 250);
+  }
+  if(vDl){
+    vDl.addEventListener('click', ()=>{
+      try{
+        const dump = validatorDump();
+        downloadText(`synth_validator_log_${Date.now()}.json`, JSON.stringify(dump, null, 2));
+        IV.log('LOG', 'validator log downloaded');
+      }catch(e){
+        IV.log('ERROR', 'download failed: ' + (e && e.message ? e.message : e));
+      }
+    });
+  }
+  }, {passive:true});
+
+
 
   // ============================================================
   // SYNTH v13 (Ready Spec)
@@ -67,6 +380,12 @@
   // ============================================================
 
   const canvas = document.getElementById('sim');
+
+  // ---------- Global deterministic state ----------
+  var blueprintLoaded = false;
+  var currentBlueprintRaw = null;
+  var STATE = { seedStr: '7F021AE4', seedOk: true };
+
   const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
   const hudState = document.getElementById('state');
   const hudShell = document.getElementById('shell');
@@ -79,6 +398,92 @@
   const btnLoad = document.getElementById('btnLoad');
   const btnOverlay = document.getElementById('btnOverlay');
   const fileInput = document.getElementById('file');
+  const seedInput = document.getElementById('seedInput');
+  const btnSeedNew = document.getElementById('btnSeedNew');
+
+  // ---------- Seed Input Validator (Rift-style contract) ----------
+  function _randHex8(){
+    // prefer crypto for better entropy; fallback deterministic-ish Math.random
+    if(window.crypto && crypto.getRandomValues){
+      const a = new Uint32Array(1); crypto.getRandomValues(a);
+      return ('00000000' + (a[0]>>>0).toString(16).toUpperCase()).slice(-8);
+    }
+    return ('00000000' + ((Math.random()*0xFFFFFFFF)>>>0).toString(16).toUpperCase()).slice(-8);
+  }
+  function normalizeSeedStr(s){
+    s = String(s ?? '').trim().toUpperCase();
+    if(!s) return '';
+    // allow hex only; strip 0x if present
+    if(s.startsWith('0X')) s = s.slice(2);
+    // collapse internal spaces
+    s = s.replace(/\s+/g,'');
+    return s;
+  }
+  function validateSeedStr(s){
+    const ss = normalizeSeedStr(s);
+    if(!ss) return {ok:false, code:'SEED_EMPTY', msg:'Seed required'};
+    if(ss.length < 4 || ss.length > 16) return {ok:false, code:'SEED_LEN', msg:'Seed must be 4–16 hex chars'};
+    if(!/^[0-9A-F]+$/.test(ss)) return {ok:false, code:'SEED_HEX', msg:'Seed must be hex (0-9 A-F)'};
+    return {ok:true, seedStr:ss};
+  }
+  function applySeed(seedStr, source='seed'){
+    const v = validateSeedStr(seedStr);
+    if(!v.ok){
+      STATE.seedOk = false;
+      seedInput.classList.add('bad');
+      IV.violations.push({at:_now(), type:'seed_contract', label:`${v.code}: ${v.msg}`, source});
+      IV.log('VIOLATION', `seed_contract ${v.code}: ${v.msg}`);
+      IV.updateUI();
+      return false;
+    }
+    STATE.seedOk = true;
+    seedInput.classList.remove('bad');
+    STATE.seedStr = v.seedStr;
+
+    // keep UI normalized
+    seedInput.value = STATE.seedStr;
+
+    IV.log('SEED', `seed=${STATE.seedStr} source=${source}`);
+
+    // if we already have a blueprint loaded, rebuild deterministically under new seed
+    try{
+      if(blueprintLoaded && currentBlueprintRaw){
+        loadBlueprint(currentBlueprintRaw, false);
+        IV.log('SEED', 'recompiled shell under new seed');
+      }
+    }catch(e){
+      IV.violations.push({at:_now(), type:'seed_recompile', label:`recompile failed: ${e.message||e}`, source});
+      IV.log('VIOLATION', `seed_recompile failed: ${e.message||e}`);
+    }
+
+    IV.updateUI();
+    return true;
+  }
+
+  // init seed from input or default
+  if(seedInput){
+    const initVal = normalizeSeedStr(seedInput.value) || STATE.seedStr;
+    seedInput.value = initVal;
+    applySeed(initVal, 'init');
+
+    seedInput.addEventListener('keydown', IV.wrap('seed_keydown', (ev)=>{
+      if(ev.key === 'Enter'){
+        applySeed(seedInput.value, 'enter');
+        seedInput.blur();
+      }
+    }));
+    seedInput.addEventListener('blur', IV.wrap('seed_blur', ()=>{
+      applySeed(seedInput.value, 'blur');
+    }));
+  }
+  if(btnSeedNew){
+    btnSeedNew.addEventListener('click', IV.wrap('seed_new', ()=>{
+      const s = _randHex8();
+      seedInput.value = s;
+      applySeed(s, 'new');
+    }));
+  }
+
 
   const btnLoadShip = document.getElementById('btnLoadShip');
   const btnLoadScanner = document.getElementById('btnLoadScanner');
@@ -546,9 +951,35 @@ function eyeStep(){
     const r = qrot(qCam, v);
     if(r.z <= 0) return null;
     const R = Math.min(W,H)*R_FRAC;
-    const cx=W*0.5, cy=H*0.52;
+    const cx=W*0.5, cy=H*0.5;
     return {x:cx + r.x*R, y:cy - r.y*R, z:clamp(r.z,0,1), rv:r};
   }
+  
+  // ---------- reticle resolver (DARPA contract) ----------
+  // Resolves the tile under the CENTER reticle (screen center) by casting the
+  // forward camera direction back into world space and selecting the nearest
+  // route tile direction (max dot). This is deterministic and lightweight.
+  function reticleWorldDir(){
+    // In camera space, the forward ray is +Z.
+    // projectDir uses r = qrot(qCam, v_world). So inverse is v_world = qrot(qinv(qCam), r_cam).
+    return norm(qrot(qinv(qCam), {x:0,y:0,z:1}));
+  }
+  function resolveReticleTile(){
+    const sh = shells.get(activeShellId);
+    if(!sh || !sh.routeDirs || !sh.routeDirs.length) return null;
+    const d = reticleWorldDir();
+    let bestI = -1, bestDot = -1;
+    // scan: routeDirs is usually small (< a few thousand). Cheap each frame.
+    for(let i=0;i<sh.routeDirs.length;i++){
+      const v = sh.routeDirs[i];
+      const s = dot(d, v);
+      if(s > bestDot){ bestDot=s; bestI=i; }
+    }
+    // require strong alignment so we don't lie
+    if(bestI<0 || bestDot < 0.985) return {idx:-1, dot:bestDot, tile:null};
+    return {idx:bestI, dot:bestDot, tile: sh.routeTiles[bestI] || null};
+  }
+
   function preprojectGrid(){
     const vCount = V.length/3;
     for(let i=0;i<vCount;i++){
@@ -563,7 +994,6 @@ function eyeStep(){
   const shells = new Map();
   const shellBySeed = new Map();
   let activeShellId = '';
-  let blueprintLoaded = false;
   const FALLBACK_BLUEPRINT = {"shellId":"SHELL_OCTAGON_ALPHA","origin":{"x":0.1,"y":0.02,"z":0.994},"pivots":[{"id":0,"u":0.14,"v":0.0},{"id":1,"u":0.098995,"v":0.098995},{"id":2,"u":0.0,"v":0.14},{"id":3,"u":-0.098995,"v":0.098995},{"id":4,"u":-0.14,"v":0.0},{"id":5,"u":-0.098995,"v":-0.098995},{"id":6,"u":-0.0,"v":-0.14},{"id":7,"u":0.098995,"v":-0.098995}],"edges":[{"a":0,"b":1},{"a":1,"b":2},{"a":2,"b":3},{"a":3,"b":4},{"a":4,"b":5},{"a":5,"b":6},{"a":6,"b":7},{"a":7,"b":0}],"rules":{"perimeterFirst":true,"mustValidateAll":true}};
 
 
@@ -894,8 +1324,10 @@ if(buildState === Build.MAPPING){
       if(!bp || !Array.isArray(bp.pivots) || bp.pivots.length < 3) throw new Error('Blueprint missing pivots[] (>=3)');
       if(!Array.isArray(bp.edges) || bp.edges.length < 3) throw new Error('Blueprint missing edges[] (>=3)');
       const shellId = String(bp.shellId || `SHELL_${Date.now()}`);
+      currentBlueprintRaw = bp;
       const canon = canonicalizeBlueprint(bp);
-      const seed = fnv1a32(canon);
+      const seedStr = (STATE && STATE.seedStr) ? String(STATE.seedStr) : '7F021AE4';
+      const seed = fnv1a32(canon + '|' + seedStr);
 
       const origin = bp.origin ? norm({x:+bp.origin.x,y:+bp.origin.y,z:+bp.origin.z}) : norm({x:0.12,y:0.04,z:0.992});
       const tb = tangentBasis(origin);
@@ -1173,7 +1605,7 @@ function render(){
     ctx.fillRect(0,0,W,H);
 
     const R = Math.min(W,H)*R_FRAC;
-    const cx=W*0.5, cy=H*0.52;
+    const cx=W*0.5, cy=H*0.5;
 
     // sphere base glow
     ctx.save();
