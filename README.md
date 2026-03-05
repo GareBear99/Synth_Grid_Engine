@@ -32,9 +32,7 @@ Entities = executors
 
 ---
 
-# Architecture
-
-Engine Core
+# Architecture Engine Core
 
 # Math-First Simulation
 
