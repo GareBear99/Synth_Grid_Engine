@@ -36,6 +36,37 @@ Entities = executors
 
 Engine Core
 
+# Math-First Simulation
+
+The engine is math-first, not graphics-first.
+
+The simulation runs entirely in deterministic 2D vector space, while the rendering layer projects the world to appear visually 3D.
+
+This approach provides several advantages:
+
+• extremely low CPU usage
+• deterministic reproducible worlds
+• simple debugging and validation
+• portable execution on almost any hardware
+
+Even older machines (2010–2012 era laptops) can run the simulation smoothly.
+
+# 2D Core → Visually 3D
+
+All world logic runs in 2D simulation space.
+
+Rendering then projects that simulation into a visually 3D environment using techniques such as:
+
+- perspective scaling
+
+- layered sprites
+
+- cube grid projection
+
+- depth shading
+
+This creates a 3D-like environment without the cost of a full 3D engine.
+
 
 ---
 
@@ -106,33 +137,3 @@ Example module blueprint
 
 
 
-# Math-First Simulation
-
-The engine is math-first, not graphics-first.
-
-The simulation runs entirely in deterministic 2D vector space, while the rendering layer projects the world to appear visually 3D.
-
-This approach provides several advantages:
-
-• extremely low CPU usage
-• deterministic reproducible worlds
-• simple debugging and validation
-• portable execution on almost any hardware
-
-Even older machines (2010–2012 era laptops) can run the simulation smoothly.
-
-# 2D Core → Visually 3D
-
-All world logic runs in 2D simulation space.
-
-Rendering then projects that simulation into a visually 3D environment using techniques such as:
-
-- perspective scaling
-
-- layered sprites
-
-- cube grid projection
-
-- depth shading
-
-This creates a 3D-like environment without the cost of a full 3D engine.
