@@ -121,18 +121,18 @@ This approach provides several advantages:
 
 Even older machines (2010–2012 era laptops) can run the simulation smoothly.
 
-2D Core → Visually 3D
+# 2D Core → Visually 3D
 
 All world logic runs in 2D simulation space.
 
 Rendering then projects that simulation into a visually 3D environment using techniques such as:
 
-perspective scaling
+- perspective scaling
 
-layered sprites
+- layered sprites
 
-cube grid projection
+- cube grid projection
 
-depth shading
+- depth shading
 
 This creates a 3D-like environment without the cost of a full 3D engine.
