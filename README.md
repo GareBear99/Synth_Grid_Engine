@@ -74,7 +74,7 @@ This creates a 3D-like environment without the cost of a full 3D engine.
 # Example World
 
 
-![Demo](/images/Image1.jpeg
+!Demo](./images/Image1.jpeg
 
 The included example blueprint: blueprint_octagon.json
 
