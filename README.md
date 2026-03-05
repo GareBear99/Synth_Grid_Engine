@@ -41,9 +41,13 @@ The simulation runs entirely in deterministic 2D vector space, while the renderi
 This approach provides several advantages:
 
 • extremely low CPU usage
+
 • deterministic reproducible worlds
+
 • simple debugging and validation
+
 • portable execution on almost any hardware
+
 
 Even older machines (2010–2012 era laptops) can run the simulation smoothly.
 
