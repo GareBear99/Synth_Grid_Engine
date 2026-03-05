@@ -32,8 +32,6 @@ Entities = executors
 
 ---
 
-# Architecture Engine Core
-
 # Math-First Simulation
 
 The engine is math-first, not graphics-first.
