@@ -106,7 +106,7 @@ Example module blueprint
 
 
 
-Math-First Simulation
+# Math-First Simulation
 
 The engine is math-first, not graphics-first.
 
